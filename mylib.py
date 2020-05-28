@@ -14,6 +14,23 @@ class InfoFilter(logging.Filter):
     return rec.levelno in (logging.DEBUG, logging.INFO)
 
 
+def get_url(url, headers={}, attempts=5):
+  if not headers:
+    headers = {'User-Agent': user_agent()}
+  logging.info('Loading %s', url)
+  for attempt in range(attempts+1):
+    try:
+      response = requests.get(url, headers=headers, timeout=2)
+      return response.text.strip()
+    except requests.exceptions.ConnectionError:
+      logging.error('Connection Error for %s.', url)
+      time.sleep(attempt*2)
+    except requests.exceptions.ReadTimeout:
+      logging.error('URL read timeout for %s.', url)
+  logging.error('Connection retries exhausted for %s.', url)
+  return ''
+
+
 def humanize(n: float, suffix: str='bps'):
     n = round(n)
     for unit in ' KMG':
@@ -98,6 +115,7 @@ def telegram(creds: str, msg: str):
         'chat_id': chat_id,
         'disable_web_page_preview': True,
         'text': msg})
+
 
 def user_agent():
   with open('/opt/user_agent.txt') as f:
